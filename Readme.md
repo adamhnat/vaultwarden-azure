@@ -3,7 +3,7 @@
 [![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fadamhnat%2Fvaultwarden-azure%2Fmaster%2Fmain.json)
 [![Visualize](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true)](http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fadamhnat%2Fvaultwarden-azure%2Fmaster%2Fmain.json)
 
-This template provides a way to deploy a **Vaultwarden** in a **Azure Container App** with external **file share** storage that can be used to backup restore data easly.
+This template provides a way to deploy a **Vaultwarden** in a **Azure Container App** with external **file share** and **database** storage that can be used to backup restore data easly.
 
 ## Deploy:
 1. Click above button and select 
@@ -24,7 +24,7 @@ This template provides a way to deploy a **Vaultwarden** in a **Azure Container 
     | 2.0 | 4.0Gi |
     ---
 - **Deploy**
-- copy db.sqlite3 (empty database, with WAL off) into fileshare (deployment bug - vaultwarden cannot create new database in SMB share)
+  - provide databaseAdmin passowrd
 
 2. Resource vaultwarden Microsoft.App/containerApps failed - if in some case you will notice failed message, just click **redeploy** and reenter same data as before - it may happen when Azure provision resources and link to storage isn't created at time.
 
@@ -35,6 +35,3 @@ in Azure Portal:
 
 ## Get Admin key:
 - Resource Group -> vaultwarden -> Containers -> Environment Variables -> double click on ADMIN_TOKEN **value**
-
-## Restore your backup into Azure Contaier App:
-- The storage is accesible via SMB in contaner it means that sqlite WAL needs to be turned off, make sure before put database in fileshare that you turned off WAL [Running without WAL enabled](https://github.com/dani-garcia/vaultwarden/wiki/Running-without-WAL-enabled)

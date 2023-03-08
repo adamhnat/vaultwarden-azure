@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.13.1.58284",
-      "templateHash": "5335694332706655092"
+      "version": "0.15.31.15270",
+      "templateHash": "41053721764921981"
     }
   },
   "parameters": {
@@ -27,7 +27,7 @@
       }
     },
     "AdminAPIKEY": {
-      "type": "secureString",
+      "type": "securestring",
       "defaultValue": "[base64(newGuid())]",
       "minLength": 20,
       "metadata": {
@@ -66,6 +66,9 @@
       "metadata": {
         "description": "Amount of memory (in gibibytes, GiB) allocated to the container up to 4GiB. Can be with a maximum of two decimals. Ratio with CPU cores must be equal to 2."
       }
+    },
+    "dbPassword": {
+      "type": "securestring"
     }
   },
   "variables": {
@@ -108,6 +111,18 @@
       "dependsOn": [
         "[resourceId('Microsoft.App/managedEnvironments', format('appenv-vaultwarden{0}', uniqueString(resourceGroup().id)))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+      "apiVersion": "2022-12-01",
+      "name": "[format('{0}/{1}', format('vwdbi-{0}', uniqueString(resourceGroup().id)), 'dbFW')]",
+      "properties": {
+        "endIpAddress": "0.0.0.0",
+        "startIpAddress": "0.0.0.0"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('vwdbi-{0}', uniqueString(resourceGroup().id)))]"
       ]
     },
     {
@@ -159,6 +174,40 @@
       ]
     },
     {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2022-12-01",
+      "name": "[format('vwdbi-{0}', uniqueString(resourceGroup().id))]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard_B1ms",
+        "tier": "Burstable"
+      },
+      "properties": {
+        "administratorLogin": "vwadmin",
+        "administratorLoginPassword": "[parameters('dbPassword')]",
+        "storage": {
+          "storageSizeGB": 32
+        },
+        "version": "14",
+        "authConfig": {
+          "passwordAuth": "Enabled",
+          "activeDirectoryAuth": "Disabled"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "apiVersion": "2022-12-01",
+      "name": "[format('{0}/{1}', format('vwdbi-{0}', uniqueString(resourceGroup().id)), format('vwdb-{0}', uniqueString(resourceGroup().id)))]",
+      "properties": {
+        "charset": "UTF8",
+        "collation": "en_US.utf8"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('vwdbi-{0}', uniqueString(resourceGroup().id)))]"
+      ]
+    },
+    {
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2022-06-01-preview",
       "name": "vaultwarden",
@@ -199,8 +248,8 @@
                   "value": "[parameters('AdminAPIKEY')]"
                 },
                 {
-                  "name": "ENABLE_DB_WAL",
-                  "value": "false"
+                  "name": "DATABASE_URL",
+                  "value": "[format('postgresql://vwadmin:{0}@{1}/{2}', parameters('dbPassword'), reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('vwdbi-{0}', uniqueString(resourceGroup().id))), '2022-12-01').fullyQualifiedDomainName, format('vwdb-{0}', uniqueString(resourceGroup().id)))]"
                 }
               ]
             }
@@ -219,7 +268,9 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', format('appenv-vaultwarden{0}', uniqueString(resourceGroup().id)))]"
+        "[resourceId('Microsoft.App/managedEnvironments', format('appenv-vaultwarden{0}', uniqueString(resourceGroup().id)))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', format('vwdbi-{0}', uniqueString(resourceGroup().id)), format('vwdb-{0}', uniqueString(resourceGroup().id)))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('vwdbi-{0}', uniqueString(resourceGroup().id)))]"
       ]
     }
   ]
