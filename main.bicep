@@ -41,9 +41,6 @@ param cpuCore string = '0.25'
 ])
 param memorySize string = '0.5'
 
-@secure()
-param dbPassword string
-
 var logWorkspaceName  = 'vw-logwks${uniqueString(resourceGroup().id)}'
 var storageAccountName  = 'vwstorage${uniqueString(resourceGroup().id)}'
 var location = resourceGroup().location
@@ -111,44 +108,6 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2022-06-01-preview'=
   }
 }
 
-resource vwDBi 'Microsoft.DBforPostgreSQL/flexibleServers@2022-12-01'={
-  location:location
-  name:'vwdbi-${uniqueString(resourceGroup().id)}'
-  sku:{
-    name: 'Standard_B1ms'
-    tier: 'Burstable'
-  }
-  properties:{
-    administratorLogin:'vwadmin'
-    administratorLoginPassword:dbPassword
-    storage:{
-      storageSizeGB:32
-    }
-    version: '14'
-    authConfig:{
-      passwordAuth:'Enabled'
-      activeDirectoryAuth:'Disabled'
-    }
-  }
-  resource dbfw 'firewallRules'={
-    name:'dbFW'
-    properties:{
-      endIpAddress: '0.0.0.0'
-      startIpAddress: '0.0.0.0'
-    }
-  }
-  
-}
-
-resource vwDB 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-12-01'={
-  name:'vwdb-${uniqueString(resourceGroup().id)}'
-  parent:vwDBi
-  properties:{
-    charset: 'UTF8'
-    collation: 'en_US.utf8'
-  }
-}
-
 resource vwardenApp 'Microsoft.App/containerApps@2022-06-01-preview'= {
   name: 'vaultwarden'
   location: location
@@ -189,8 +148,8 @@ resource vwardenApp 'Microsoft.App/containerApps@2022-06-01-preview'= {
               value: AdminAPIKEY
             }
             {
-              name:'DATABASE_URL'
-              value:'postgresql://vwadmin:${dbPassword}@${vwDBi.properties.fullyQualifiedDomainName}/${vwDB.name}'
+              name: 'ENABLE_DB_WAL'
+              value: 'false'
             }
           ]
         }
